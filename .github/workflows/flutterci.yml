@@ -24,7 +24,7 @@ jobs:
           java-version: '12.x'
       
       # Step 3: Setup Flutter with version 3.7.11
-      - uses: subosito/flutter-action@v1
+      - uses: subosito/flutter-action@v3
         with:
           flutter-version: '3.22.1'
       
