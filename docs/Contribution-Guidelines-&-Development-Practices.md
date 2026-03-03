@@ -29,13 +29,13 @@ When opening PRs, **please specify the commit type** using the following convent
 
 **Flutter Version**
 
-Use **Flutter 3.29.2** or later for development (as of 23 Feb 2026):
-
+Use **Flutter 3.29.2** or later for development (documentation updated 23 Feb 2026):
 ```text
 Flutter 3.29.2 • channel stable
-Framework • revision 90673a4eef • 2026-02-18
-Dart 3.7.2 • DevTools 2.42.3
+Framework • revision 90673a4eef • 2026-02-18 (framework revision date)
+Dart 3.7.2 • DevTools 2.42.3 • released 2025-03-12
 ```
+
 **File Naming Convention**
 
 The project follows [snake_case](https://en.wikipedia.org/wiki/Snake_case) naming — this must be followed without fail.
@@ -44,11 +44,10 @@ The project follows [snake_case](https://en.wikipedia.org/wiki/Snake_case) namin
 * File names   : services_info.dart, dev_api_service.dart, home_view.dart
 * Folder names : api, disk_explorer, smart_widgets
 
-
 **UI/UX Constants**
 
 Colors, dimensions, and any UI constants must be defined in the respective theme file:
-`/lib/app/themes/themes.dart`
+`/lib/app/utils/themes/themes.dart`
 
 **Documentation**
 
@@ -60,4 +59,4 @@ Document all functions, classes, and logic you implement. Follow the [Effective 
 
 Join the CCExtractor community on **Zulip** to propose improvements and connect with other contributors.
 
-- 💬 [Join CCExtractor on Zulip](https://ccextractor.org/public:general:support)
+- 💬 [Join CCExtractor on Zulip](https://ccextractor.org/public/general/support)
