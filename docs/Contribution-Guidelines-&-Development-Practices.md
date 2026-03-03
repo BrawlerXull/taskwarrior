@@ -31,12 +31,11 @@ When opening PRs, **please specify the commit type** using the following convent
 
 Use **Flutter 3.29.2** or later for development (as of 23 Feb 2026):
 
-\```
+```text
 Flutter 3.29.2 • channel stable
 Framework • revision 90673a4eef • 2026-02-18
 Dart 3.7.2 • DevTools 2.42.3
-\```
-
+```
 **File Naming Convention**
 
 The project follows [snake_case](https://en.wikipedia.org/wiki/Snake_case) naming — this must be followed without fail.
