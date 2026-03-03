@@ -29,12 +29,12 @@ When opening PRs, **please specify the commit type** using the following convent
 
 **Flutter Version**
 
-Use **Flutter 3.41.2** or later for development (as of 23 Feb 2026):
+Use **Flutter 3.29.2** or later for development (as of 23 Feb 2026):
 
 \```
-Flutter 3.41.2 • channel stable
+Flutter 3.29.2 • channel stable
 Framework • revision 90673a4eef • 2026-02-18
-Dart 3.11.0 • DevTools 2.54.1
+Dart 3.7.2 • DevTools 2.42.3
 \```
 
 **File Naming Convention**
@@ -61,4 +61,4 @@ Document all functions, classes, and logic you implement. Follow the [Effective 
 
 Join the CCExtractor community on **Zulip** to propose improvements and connect with other contributors.
 
-- 💬 [Join CCExtractor on Zulip](https://ccextractor.org/public:general:support?)
+- 💬 [Join CCExtractor on Zulip](https://ccextractor.org/public:general:support)

@@ -1,7 +1,7 @@
 # Getting Started
 1. Clone the repository from GitHub:
 ```
-git clone https://github.com/NishantSinghal19/taskwarrior-flutter.git
+git clone https://github.com/CCExtractor/taskwarrior-flutter
 ```
 2. Navigate to the project's root directory:
 ```
