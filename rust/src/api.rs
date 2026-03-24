@@ -242,6 +242,86 @@ pub async fn sync(
     0
 }
 
+#[frb]
+pub fn query_task(
+    taskdb_dir_path: String,
+    filter: HashMap<String, String>,
+) -> Result<String, taskchampion::Error> {
+    let all_tasks = get_all_tasks(taskdb_dir_path);
+
+    let filtered: Vec<HashMap<String, String>> = all_tasks
+        .into_iter()
+        .filter(|task| {
+            // Filter by UUID
+            if let Some(uuid_filter) = filter.get("uuid") {
+                if !uuid_filter.is_empty() {
+                    if let Some(task_uuid) = task.get("uuid") {
+                        if task_uuid != uuid_filter {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+
+            // Filter by status
+            if let Some(status_filter) = filter.get("status") {
+                if !status_filter.is_empty() {
+                    if let Some(task_status) = task.get("status") {
+                        if task_status != status_filter {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+
+            // Filter by project
+            if let Some(project_filter) = filter.get("project") {
+                if !project_filter.is_empty() {
+                    if let Some(task_project) = task.get("project") {
+                        if !task_project.starts_with(project_filter.as_str()) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+
+            // Filter by tags: space-separated, +tag means must have, -tag means must not have
+            if let Some(tags_filter) = filter.get("tags") {
+                if !tags_filter.is_empty() {
+                    let task_tags: Vec<&str> = task
+                        .get("tags")
+                        .map(|t| t.split_whitespace().collect())
+                        .unwrap_or_default();
+
+                    for tag_expr in tags_filter.split_whitespace() {
+                        if let Some(tag_name) = tag_expr.strip_prefix('+') {
+                            if !task_tags.contains(&tag_name) {
+                                return false;
+                            }
+                        } else if let Some(tag_name) = tag_expr.strip_prefix('-') {
+                            if task_tags.contains(&tag_name) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            true
+        })
+        .collect();
+
+    let json = serde_json::to_string(&filtered)
+        .map_err(|e| taskchampion::Error::Other(anyhow::anyhow!(e)))?;
+    Ok(json)
+}
+
 #[test]
 fn test_add_task_with_tags() {
     use std::{collections::HashMap, env, fs};
@@ -270,6 +350,89 @@ fn test_add_task_with_tags() {
     let tags = task.get("tags").map(|s| s.as_str()).unwrap_or("");
     assert!(tags.contains("tag1"), "tag1 missing in tags: {}", tags);
     assert!(tags.contains("tag2"), "tag2 missing in tags: {}", tags);
+
+    // cleanup
+    fs::remove_dir_all(&tmp).ok();
+}
+
+#[test]
+fn test_query_task() {
+    use std::{collections::HashMap, env, fs};
+    let tmp = env::temp_dir().join(format!("taskdb_query_test_{}", Uuid::new_v4()));
+    let taskdb_path = tmp.to_string_lossy().into_owned();
+    fs::create_dir_all(&tmp).expect("create temp taskdb dir");
+
+    // Add task 1: pending, project=work, tags=urgent important
+    let uuid1 = Uuid::new_v4().to_string();
+    let mut map1: HashMap<String, String> = HashMap::new();
+    map1.insert("uuid".into(), uuid1.clone());
+    map1.insert("description".into(), "fix the bug".into());
+    map1.insert("tags".into(), "urgent important".into());
+    map1.insert("project".into(), "work".into());
+    assert_eq!(add_task(taskdb_path.clone(), map1), 0);
+
+    // Add task 2: pending, project=home, tags=errand
+    let uuid2 = Uuid::new_v4().to_string();
+    let mut map2: HashMap<String, String> = HashMap::new();
+    map2.insert("uuid".into(), uuid2.clone());
+    map2.insert("description".into(), "buy groceries".into());
+    map2.insert("tags".into(), "errand".into());
+    map2.insert("project".into(), "home".into());
+    assert_eq!(add_task(taskdb_path.clone(), map2), 0);
+
+    // Query by UUID
+    let mut filter = HashMap::new();
+    filter.insert("uuid".into(), uuid1.clone());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].get("uuid").unwrap(), &uuid1);
+
+    // Query by status
+    let mut filter = HashMap::new();
+    filter.insert("status".into(), "pending".into());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 2);
+
+    // Query by project
+    let mut filter = HashMap::new();
+    filter.insert("project".into(), "work".into());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].get("uuid").unwrap(), &uuid1);
+
+    // Query by tag include (+urgent)
+    let mut filter = HashMap::new();
+    filter.insert("tags".into(), "+urgent".into());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].get("uuid").unwrap(), &uuid1);
+
+    // Query by tag exclude (-urgent) should return task 2
+    let mut filter = HashMap::new();
+    filter.insert("tags".into(), "-urgent".into());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].get("uuid").unwrap(), &uuid2);
+
+    // Query combining status + project
+    let mut filter = HashMap::new();
+    filter.insert("status".into(), "pending".into());
+    filter.insert("project".into(), "home".into());
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].get("uuid").unwrap(), &uuid2);
+
+    // Empty filter returns all
+    let filter = HashMap::new();
+    let json = query_task(taskdb_path.clone(), filter).unwrap();
+    let results: Vec<HashMap<String, String>> = serde_json::from_str(&json).unwrap();
+    assert_eq!(results.len(), 2);
 
     // cleanup
     fs::remove_dir_all(&tmp).ok();

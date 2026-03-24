@@ -91,6 +91,32 @@ class Replica {
     return "scc";
   }
 
+  static Future<List<TaskForReplica>> queryTasksFromReplica({
+    String? uuid,
+    String? status,
+    String? project,
+    List<String>? tags,
+  }) async {
+    var taskdbDirPath = await getReplicaPath();
+    Map<String, String> filter = {};
+    if (uuid != null && uuid.isNotEmpty) filter['uuid'] = uuid;
+    if (status != null && status.isNotEmpty) filter['status'] = status;
+    if (project != null && project.isNotEmpty) filter['project'] = project;
+    if (tags != null && tags.isNotEmpty) filter['tags'] = tags.join(' ');
+
+    List<TaskForReplica> tasks = [];
+    try {
+      var res = await queryTask(taskdbDirPath: taskdbDirPath, filter: filter);
+      var map = jsonDecode(res);
+      tasks = List<TaskForReplica>.from(map
+          .map((e) => TaskForReplica.fromJson(Map<String, dynamic>.from(e))));
+    } catch (e) {
+      debugPrint("Error querying tasks from Replica: $e");
+      return [];
+    }
+    return tasks;
+  }
+
   static Future<List<TaskForReplica>> getAllTasksFromReplica() async {
     var taskdbDirPath = await getReplicaPath();
     List<TaskForReplica> tasks = [];

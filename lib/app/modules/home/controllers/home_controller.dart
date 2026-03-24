@@ -499,10 +499,17 @@ class HomeController extends GetxController {
     if (!searchVisible.value) {
       searchedTasks.assignAll(queriedTasks);
       searchController.text = '';
+      if (taskReplica.value) {
+        refreshReplicaTaskList();
+      }
     }
   }
 
   void search(String term) {
+    if (taskReplica.value && term.isNotEmpty) {
+      searchReplicaTasks(term);
+      return;
+    }
     searchedTasks.assignAll(
       queriedTasks
           .where(
@@ -511,6 +518,49 @@ class HomeController extends GetxController {
           )
           .toList(),
     );
+  }
+
+  Future<void> searchReplicaTasks(String term) async {
+    // Build filter map for Rust-side query
+    List<String> tagFilters = [];
+    String? statusFilter;
+    String? projectFilter;
+    String? uuidFilter;
+    String descriptionTerm = '';
+
+    for (var part in term.split(' ')) {
+      if (part.startsWith('+') && part.length > 1) {
+        tagFilters.add(part); // +tag
+      } else if (part.startsWith('-') && part.length > 1) {
+        tagFilters.add(part); // -tag
+      } else if (part.startsWith('status:')) {
+        statusFilter = part.substring(7);
+      } else if (part.startsWith('project:')) {
+        projectFilter = part.substring(8);
+      } else if (part.startsWith('uuid:')) {
+        uuidFilter = part.substring(5);
+      } else {
+        descriptionTerm += '$part ';
+      }
+    }
+
+    var results = await Replica.queryTasksFromReplica(
+      uuid: uuidFilter,
+      status: statusFilter,
+      project: projectFilter,
+      tags: tagFilters.isNotEmpty ? tagFilters : null,
+    );
+
+    // Apply client-side description filtering if needed
+    var trimmed = descriptionTerm.trim().toLowerCase();
+    if (trimmed.isNotEmpty) {
+      results = results
+          .where((t) =>
+              (t.description ?? '').toLowerCase().contains(trimmed))
+          .toList();
+    }
+
+    tasksFromReplica.value = results;
   }
 
   void setInitialTabIndex(int index) {

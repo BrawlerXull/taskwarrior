@@ -87,6 +87,9 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiGetAllTasksJson({required String taskdbDirPath});
 
+  Future<String> crateApiQueryTask(
+      {required String taskdbDirPath, required Map<String, String> filter});
+
   Future<int> crateApiSync(
       {required String taskdbDirPath,
       required String url,
@@ -181,6 +184,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiGetAllTasksJsonConstMeta => const TaskConstMeta(
         debugName: "get_all_tasks_json",
         argNames: ["taskdbDirPath"],
+      );
+
+  @override
+  Future<String> crateApiQueryTask(
+      {required String taskdbDirPath, required Map<String, String> filter}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(taskdbDirPath, serializer);
+        sse_encode_Map_String_String_None(filter, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 6, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiQueryTaskConstMeta,
+      argValues: [taskdbDirPath, filter],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiQueryTaskConstMeta => const TaskConstMeta(
+        debugName: "query_task",
+        argNames: ["taskdbDirPath", "filter"],
       );
 
   @override

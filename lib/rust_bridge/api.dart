@@ -28,6 +28,12 @@ Future<int> addTask(
     RustLib.instance.api
         .crateApiAddTask(taskdbDirPath: taskdbDirPath, map: map);
 
+Future<String> queryTask(
+        {required String taskdbDirPath,
+        required Map<String, String> filter}) =>
+    RustLib.instance.api
+        .crateApiQueryTask(taskdbDirPath: taskdbDirPath, filter: filter);
+
 Future<int> sync_(
         {required String taskdbDirPath,
         required String url,

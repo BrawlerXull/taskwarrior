@@ -200,6 +200,43 @@ fn wire__crate__api__sync_impl(
         },
     )
 }
+fn wire__crate__api__query_task_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "query_task",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_taskdb_dir_path = <String>::sse_decode(&mut deserializer);
+            let api_filter =
+                <std::collections::HashMap<String, String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let output_ok = crate::api::query_task(api_taskdb_dir_path, api_filter)?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__update_task_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -347,6 +384,7 @@ fn pde_ffi_dispatcher_primary_impl(
         3 => wire__crate__api__get_all_tasks_json_impl(port, ptr, rust_vec_len, data_len),
         4 => wire__crate__api__sync_impl(port, ptr, rust_vec_len, data_len),
         5 => wire__crate__api__update_task_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__query_task_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
