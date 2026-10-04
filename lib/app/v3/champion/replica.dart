@@ -2,17 +2,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:collection';
 
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:taskwarrior/app/models/models.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskchampion/credentials_storage.dart';
 import 'package:taskwarrior/app/v3/champion/models/task_for_replica.dart';
-import 'package:taskwarrior/app/v3/models/task.dart';
 import 'package:taskwarrior/rust_bridge/api.dart';
 import 'package:uuid/v4.dart';
 
 class Replica {
+  static const AppLogger _log = AppLogger('Replica');
+
   static List<String> attrs = [
     "description",
     "due",
@@ -55,8 +55,7 @@ class Replica {
       await addTask(taskdbDirPath: taskdbDirPath, map: map);
       await getAllTasksFromReplica(); //to update the db
     } catch (e, s) {
-      debugPrint(e.toString());
-      debugPrint(s.toString());
+      _log.warning('Replica refused to add a task', e, s);
       return _reason(e);
     }
     return null;
@@ -76,20 +75,18 @@ class Replica {
     String tags = "";
     if (newTask.tags != null) {
       tags = newTask.tags!.join(" ");
-      debugPrint("Modifying Replica Task Tags: $tags");
       map["tags"] = tags;
     }
     var json = newTask.toJson();
     for (String attr in attrs) {
       if (json[attr] != null) map[attr] = json[attr].toString();
     }
-    debugPrint("Modifying Replica Task JSON the map: $map");
+    _log.debug('Modifying task ${newTask.uuid}: ${map.keys.join(', ')}');
     try {
       await updateTask(
           uuidSt: newTask.uuid, taskdbDirPath: taskdbDirPath, map: map);
     } catch (e, s) {
-      debugPrint(e.toString());
-      debugPrint(s.toString());
+      _log.warning('Replica refused to modify task ${newTask.uuid}', e, s);
       return _reason(e);
     }
     return null;
@@ -165,8 +162,7 @@ class Replica {
     try {
       await deleteTask(uuidSt: uuid, taskdbDirPath: taskdbDirPath);
     } catch (e, s) {
-      debugPrint(e.toString());
-      debugPrint(s.toString());
+      _log.warning('Replica refused to delete task $uuid', e, s);
       return _reason(e);
     }
     return null;
@@ -178,12 +174,11 @@ class Replica {
     try {
       var res = await getAllTasksJson(taskdbDirPath: taskdbDirPath);
       var map = jsonDecode(res);
-      debugPrint("Fetched from Replica: $map");
       tasks = List<TaskForReplica>.from(map
           .map((e) => TaskForReplica.fromJson(Map<String, dynamic>.from(e))));
-      debugPrint("Parsed from Replica: $tasks");
-    } catch (e) {
-      debugPrint("Error fetching from Replica $e");
+      _log.debug('Fetched ${tasks.length} tasks from Replica');
+    } catch (e, s) {
+      _log.error('Could not read tasks from Replica', e, s);
       return [];
     }
     return tasks;
@@ -195,9 +190,9 @@ class Replica {
       var url = await CredentialsStorage.getApiUrl();
       var clientId = await CredentialsStorage.getClientId();
       var encryptionSecret = await CredentialsStorage.getEncryptionSecret();
-      // Never log the client id or encryption secret: debugPrint output is
+      // Never log the client id or encryption secret: info-level logs are
       // persisted to the debug-log database shown on the Logs page.
-      debugPrint("Syncing Replica with url=$url "
+      _log.info("Syncing Replica with url=$url "
           "(clientId set: ${clientId?.isNotEmpty ?? false}, "
           "encryptionSecret set: ${encryptionSecret?.isNotEmpty ?? false})");
       await sync_(
@@ -205,8 +200,9 @@ class Replica {
           url: url ?? "",
           clientId: clientId ?? "",
           encryptionSecret: encryptionSecret ?? "");
-    } catch (e) {
-      debugPrint("Error syncing Replica $e");
+      _log.info('Replica sync finished');
+    } catch (e, s) {
+      _log.warning('Replica sync failed', e, s);
     }
   }
 

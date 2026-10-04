@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+
+const AppLogger _log = AppLogger('Tour');
 
 /// Scrolls [target]'s widget into view, for use as a coach mark's `beforeFocus`.
 ///
@@ -53,8 +56,9 @@ Future<void> safeShowTour({
   }
   try {
     tutorialCoachMark.show(context: context);
-  } catch (_) {
+  } catch (e, s) {
     // Defensive: never let a tour failure bubble up or repeat.
+    _log.warning('Showing the coach-mark tour failed', e, s);
     await markSeen?.call();
   }
 }

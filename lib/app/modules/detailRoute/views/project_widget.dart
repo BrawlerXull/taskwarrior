@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:taskwarrior/app/modules/detailRoute/controllers/detail_route_controller.dart';
 import 'package:taskwarrior/app/modules/detailRoute/views/attribute_card.dart';
 import 'package:taskwarrior/app/modules/detailRoute/views/detail_route_dialog_action.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 

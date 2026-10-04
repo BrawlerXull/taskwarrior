@@ -1,4 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
+
+const AppLogger _log = AppLogger('Locale');
 
 enum SupportedLanguage {
   english,
@@ -62,7 +65,7 @@ extension SupportedLanguageExtension on SupportedLanguage {
     // Get the current system locale
     final String systemLocale =
         WidgetsBinding.instance.window.locale.languageCode;
-    debugPrint('System Locale: $systemLocale');
+    _log.debug('System locale is $systemLocale.');
 
     final supportedLanguage = fromCode(systemLocale);
     // Return the supported language or default to English

@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:taskwarrior/app/models/report.dart';
 import 'package:taskwarrior/app/services/report_service.dart';
 import 'package:taskwarrior/app/services/taskrc_service.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskchampion/virtual_filter_engine.dart';
 import 'package:taskwarrior/app/v3/champion/models/task_for_replica.dart';
 import 'package:taskwarrior/app/v3/champion/replica.dart';
@@ -10,6 +11,8 @@ import 'package:taskwarrior/app/v3/champion/replica.dart';
 /// definitions (custom `.taskrc` reports first, then defaults) and runs the
 /// selected one over the current replica task list.
 class ReportEngineController extends GetxController {
+  static const AppLogger _log = AppLogger('Reports');
+
   final RxList<ReportDefinition> reports = <ReportDefinition>[].obs;
   final Rxn<ReportDefinition> selectedReport = Rxn<ReportDefinition>();
   final RxList<TaskForReplica> results = <TaskForReplica>[].obs;
@@ -32,7 +35,8 @@ class ReportEngineController extends GetxController {
           await TaskrcService.loadCustomReports();
       reports.assignAll(ReportService.availableReports(custom));
       taskrcPath.value = await TaskrcService.taskrcPath();
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('Could not load custom reports; showing defaults only', e, s);
       reports.assignAll(ReportService.availableReports());
     } finally {
       isLoading.value = false;
@@ -49,7 +53,8 @@ class ReportEngineController extends GetxController {
       final List<TaskForReplica> tasks =
           await Replica.getAllTasksFromReplica();
       results.assignAll(ReportService.execute(report, tasks));
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('Could not read tasks from the replica to run a report', e, s);
       // Surface the failure distinctly from a legitimately empty report —
       // otherwise a broken replica read silently looks like "no tasks match".
       results.clear();
@@ -86,7 +91,8 @@ class ReportEngineController extends GetxController {
       await TaskrcService.saveReport(report);
       await loadReports();
       return null;
-    } catch (e) {
+    } catch (e, s) {
+      _log.warning('Could not save a custom report', e, s);
       return 'Could not save the report: $e';
     }
   }
@@ -98,7 +104,8 @@ class ReportEngineController extends GetxController {
       if (selectedReport.value?.name == name) clearSelection();
       await loadReports();
       return null;
-    } catch (e) {
+    } catch (e, s) {
+      _log.warning('Could not delete a custom report', e, s);
       return 'Could not delete the report: $e';
     }
   }

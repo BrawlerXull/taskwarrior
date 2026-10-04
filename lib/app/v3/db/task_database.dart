@@ -1,13 +1,15 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/v3/models/task.dart';
 
 class TaskDatabase {
+  static const AppLogger _log = AppLogger('TaskDatabase');
+
   Database? _database;
 
   Future<void> open() async {
@@ -16,7 +18,6 @@ class TaskDatabase {
   }
 
   Future<void> _open(path) async {
-    debugPrint("called _open with $path");
     _database = await openDatabase(path, version: 2,
         onCreate: (Database db, version) async {
       await db.execute('''
@@ -76,7 +77,7 @@ class TaskDatabase {
             )
           ''');
     });
-    debugPrint("Database opened at $path");
+    _log.debug('Opened task database at $path');
   }
 
   Future<void> openForProfile(String profile) async {
@@ -97,37 +98,17 @@ class TaskDatabase {
     List<TaskForC> a = await Future.wait(
       maps.map((mapItem) => getObjectForTask(mapItem)).toList(),
     );
-    if (maps.isNotEmpty) {
-      debugPrint("Database fetch ${maps.last}");
-      for (int i = 0; i < maps.length; i++) {
-        debugPrint("Database fetch ${maps[i]}");
-      }
-    } else {
-      debugPrint("Database fetch: No tasks found");
-    }
-    debugPrint('Tasks from db');
-    debugPrint(a.toString());
+    _log.debug('Fetched ${a.length} tasks from the database');
     return a;
   }
 
   Future<void> deleteAllTasksInDB() async {
     await ensureDatabaseIsOpen();
-    debugPrint("Delete All Tasks !");
+    _log.info('Marking all tasks as deleted');
     await _database!.update(
       'Tasks',
       {'status': 'deleted'},
     );
-  }
-
-  Future<void> printDatabaseContents() async {
-    await ensureDatabaseIsOpen();
-
-    List<Map<String, dynamic>> maps = await _database!.query('Tasks');
-    for (var map in maps) {
-      map.forEach((key, value) {
-        debugPrint('Key: $key, Value: $value, Type: ${value.runtimeType}');
-      });
-    }
   }
 
   Future<void> insertTask(TaskForC task) async {
@@ -139,8 +120,7 @@ class TaskDatabase {
             .map((a) => {"entry": a.entry, "description": a.description})
             .toList()
         : [];
-    debugPrint(
-        "Database insert ${task.description} for task tags are $taskTags");
+    _log.debug('Inserting task ${task.uuid} with ${taskTags.length} tags');
     var map = task.toJson();
     map.remove("tags");
     map.remove("depends");
@@ -165,12 +145,11 @@ class TaskDatabase {
 
   Future<void> updateTask(TaskForC task) async {
     await ensureDatabaseIsOpen();
-    debugPrint("Database update");
     List<String> taskTags = task.tags?.map((e) => e.toString()).toList() ?? [];
-    debugPrint("Database update $taskTags");
     List<String> taskDepends =
         task.depends?.map((e) => e.toString()).toList() ?? [];
-    debugPrint("Database update $taskDepends");
+    _log.debug('Updating task ${task.uuid} with ${taskTags.length} tags and '
+        '${taskDepends.length} dependencies');
     List<Map<String, String?>> taskAnnotations = task.annotations != null
         ? task.annotations!
             .map((a) => {"entry": a.entry, "description": a.description})
@@ -223,8 +202,7 @@ class TaskDatabase {
       where: 'uuid = ?',
       whereArgs: [uuid],
     );
-    debugPrint('task${uuid}completed');
-    debugPrint({DateTime.now().toIso8601String()}.toString());
+    _log.debug('Marked task $uuid as completed');
   }
 
   Future<void> markTaskAsDeleted(String uuid) async {
@@ -236,7 +214,7 @@ class TaskDatabase {
       where: 'uuid = ?',
       whereArgs: [uuid],
     );
-    debugPrint('task${uuid}deleted');
+    _log.debug('Marked task $uuid as deleted');
   }
 
   Future<void> saveEditedTaskInDB(
@@ -250,7 +228,6 @@ class TaskDatabase {
   ) async {
     await ensureDatabaseIsOpen();
 
-    debugPrint('task in saveEditedTaskInDB: $uuid with due $newDue');
     await _database!.update(
       'Tasks',
       {
@@ -264,7 +241,7 @@ class TaskDatabase {
       where: 'uuid = ?',
       whereArgs: [uuid],
     );
-    debugPrint('task${uuid}edited');
+    _log.debug('Saved edits to task $uuid');
     if (newTags.isNotEmpty) {
       TaskForC? task = await getTaskByUuid(uuid);
       await setTagsForTask(uuid, task?.id ?? 0, newTags.toList());
@@ -279,7 +256,7 @@ class TaskDatabase {
       where: 'uuid IS NULL OR uuid = ?',
       whereArgs: [''],
     );
-    debugPrint("Tasks without uuid are $maps");
+    _log.debug('Found ${maps.length} tasks without a UUID');
     return await Future.wait(
       maps.map((mapItem) => getObjectForTask(mapItem)).toList(),
     );
@@ -291,7 +268,6 @@ class TaskDatabase {
       where: 'project = ?',
       whereArgs: [project],
     );
-    debugPrint("DB Stored for $maps");
     return await Future.wait(
       maps.map((mapItem) => getObjectForTask(mapItem)).toList(),
     );
@@ -353,7 +329,6 @@ class TaskDatabase {
 
   // Set tags using a composite key
   Future<void> setTagsForTask(String uuid, int id, List<String> tags) async {
-    debugPrint('Setting tags for task $uuid: $tags');
     try {
       await ensureDatabaseIsOpen();
       final db = _database;
@@ -377,8 +352,8 @@ class TaskDatabase {
           }
         }
       });
-    } catch (e) {
-      debugPrint('Error setting tags for task $uuid: $e');
+    } catch (e, s) {
+      _log.error('Could not save tags for task $uuid', e, s);
     }
   }
 
@@ -423,8 +398,8 @@ class TaskDatabase {
           }
         }
       });
-    } catch (e) {
-      debugPrint('Error setting depends for task $uuid: $e');
+    } catch (e, s) {
+      _log.error('Could not save dependencies for task $uuid', e, s);
     }
   }
 
@@ -479,8 +454,8 @@ class TaskDatabase {
           }
         }
       });
-    } catch (e) {
-      debugPrint('Error setting annotations for task $uuid: $e');
+    } catch (e, s) {
+      _log.error('Could not save annotations for task $uuid', e, s);
     }
   }
 
@@ -505,7 +480,7 @@ class TaskDatabase {
       TaskForC task = await getObjectForTask(map);
       tasksJson.add(task.toJson());
     }
-    debugPrint("TASK$tasksJson");
+    _log.info('Exported ${tasksJson.length} tasks');
     return tasksJson.toString();
   }
 

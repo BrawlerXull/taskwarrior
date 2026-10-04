@@ -146,6 +146,7 @@ class TaskReplicaViewBuilder extends StatelessWidget {
                       final HomeController hc = Get.find<HomeController>();
                       if (!hc.useDelayTask.value) return false;
                     } catch (_) {
+                      // HomeController not registered yet: no highlighting.
                       return false;
                     }
                     final dueStr = task.due;

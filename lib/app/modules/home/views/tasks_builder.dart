@@ -111,7 +111,6 @@ class TasksBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // print(taskData);
     TaskwarriorColorTheme tColors =
         Theme.of(context).extension<TaskwarriorColorTheme>()!;
     var storageWidget = Get.find<HomeController>();

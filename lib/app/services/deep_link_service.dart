@@ -5,8 +5,11 @@ import 'package:app_links/app_links.dart';
 import 'package:taskwarrior/app/modules/home/views/add_task_bottom_sheet_new.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/routes/app_pages.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 
 class DeepLinkService extends GetxService {
+  static const AppLogger _log = AppLogger('DeepLink');
+
   late AppLinks _appLinks;
   String? _queuedUri; // Made private
   String? get queuedUri => _queuedUri; // Added getter
@@ -19,17 +22,17 @@ class DeepLinkService extends GetxService {
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
         _queuedUri = initialUri.toString();
-        debugPrint('🔗 INITIAL LINK QUEUED: $_queuedUri');
+        _log.info('Queued initial deep link ${_describe(initialUri)}.');
       }
-    } catch (e) {
-      debugPrint('Deep link init error: $e');
+    } catch (e, s) {
+      _log.warning('Deep link init failed', e, s);
     }
 
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-      debugPrint('🔗 LINK RECEIVED: $uri');
+      _log.info('Received deep link ${_describe(uri)}.');
       _handleWidgetUri(uri);
-    }, onError: (err) {
-      debugPrint('🔗 LINK STREAM ERROR: $err');
+    }, onError: (Object err, StackTrace s) {
+      _log.warning('Deep link stream reported an error', err, s);
     });
   }
 
@@ -43,22 +46,25 @@ class DeepLinkService extends GetxService {
     if (Get.isRegistered<HomeController>()) {
       _executeAction(uri, Get.find<HomeController>());
     } else {
-      debugPrint("⏳ HomeController not ready. Queuing action.");
+      _log.debug('HomeController is not ready, so the deep link was queued.');
       _queuedUri = uri.toString();
     }
   }
 
   void consumePendingActions(HomeController controller) {
     if (_queuedUri != null) {
-      debugPrint("🚀 Executing queued action...");
+      _log.debug('Executing the queued deep link action.');
       try {
         _executeAction(Uri.parse(_queuedUri!), controller);
-      } catch (e) {
-        debugPrint("🔗 FAILED TO PARSE URI: $_queuedUri - Error: $e");
+      } catch (e, s) {
+        _log.warning('Failed to execute the queued deep link', e, s);
       }
       _queuedUri = null;
     }
   }
+
+  /// Scheme, host and path only: the query string can carry task text.
+  static String _describe(Uri uri) => '${uri.scheme}://${uri.host}${uri.path}';
 
   void _executeAction(Uri uri, HomeController controller) {
     final bool isTaskChampion = controller.taskchampion.value;

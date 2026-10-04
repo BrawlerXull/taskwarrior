@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:taskwarrior/app/models/task_like.dart';
 import "./annotation.dart";
 
@@ -63,7 +62,6 @@ class TaskForC implements TaskLike {
   });
 
   factory TaskForC.fromJson(Map<String, dynamic> json) {
-    debugPrint("Annotation fromJson: ${json['annotations'] == null}");
     return TaskForC(
         id: json['id'],
         description: json['description'],
@@ -90,7 +88,6 @@ class TaskForC implements TaskLike {
   }
 
   Map<String, dynamic> toJson() {
-    debugPrint("TAGS: $tags");
     return {
       'id': id,
       'description': description,

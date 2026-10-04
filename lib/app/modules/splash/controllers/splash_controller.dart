@@ -2,7 +2,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,12 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taskwarrior/app/models/storage.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/routes/app_pages.dart';
-import 'package:taskwarrior/app/utils/taskchampion/credentials_storage.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskfunctions/profiles.dart';
 import 'package:taskwarrior/app/v3/models/task.dart';
 import 'package:taskwarrior/app/services/deep_link_service.dart';
 
 class SplashController extends GetxController {
+  static const AppLogger _log = AppLogger('Splash');
+
   late Rx<Directory> baseDirectory = Directory('').obs;
   late RxMap<String, String?> profilesMap = <String, String?>{}.obs;
   late RxString currentProfile = ''.obs;
@@ -24,7 +25,7 @@ class SplashController extends GetxController {
 
   @override
   void onInit() {
-    debugPrint("🚀 BOOT: SplashController.onInit()");
+    _log.debug('Splash controller initialised');
     super.onInit();
   }
 
@@ -39,7 +40,7 @@ class SplashController extends GetxController {
 
     final deepLinkService = Get.find<DeepLinkService>();
     if (deepLinkService.queuedUri != null) {
-      debugPrint("🚀 TRACE: Bypassing Splash routing for queued URI");
+      _log.debug('Deep link queued, skipping splash routing');
       Get.offNamed(Routes.HOME);
       return;
     }
@@ -166,21 +167,23 @@ class SplashController extends GetxController {
       AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
       if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
         if (updateInfo.immediateUpdateAllowed) {
-          InAppUpdate.performImmediateUpdate().catchError((e) {
-            debugPrint(e.toString());
+          InAppUpdate.performImmediateUpdate().catchError((e, s) {
+            _log.warning('Immediate app update failed', e, s);
           });
         } else if (updateInfo.flexibleUpdateAllowed) {
           InAppUpdate.startFlexibleUpdate().then((_) {
-            InAppUpdate.completeFlexibleUpdate().catchError((e) {
-              debugPrint(e.toString());
+            InAppUpdate.completeFlexibleUpdate().catchError((e, s) {
+              _log.warning('Could not complete flexible app update', e, s);
             });
-          }).catchError((e) {
-            debugPrint(e.toString());
+          }).catchError((e, s) {
+            _log.warning('Could not start flexible app update', e, s);
           });
         }
       }
     } catch (e) {
-      debugPrint(e.toString());
+      // Expected on every launch outside Google Play (iOS, F-Droid, debug
+      // builds), so this stays at debug level instead of being persisted.
+      _log.debug('In-app update check unavailable: $e');
     }
   }
 }

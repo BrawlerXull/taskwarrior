@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:pem/pem.dart';
 import 'package:taskwarrior/app/models/storage.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 
 class PemWidget extends StatelessWidget {
+  static const AppLogger _log = AppLogger('TaskServer');
+
   const PemWidget({
     required this.storage,
     required this.pem,
@@ -47,7 +50,8 @@ class PemWidget extends StatelessWidget {
         identifier = fingerprint(contents).toUpperCase(); // Null check removed
       }
     } catch (e) {
-      debugPrint(e.toString());
+      // Expected for non-certificate files such as the private key.
+      _log.debug('Could not compute a fingerprint for $pem: ${e.runtimeType}');
     }
 
     var tileColor = tColors.primaryBackgroundColor;

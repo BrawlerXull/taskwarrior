@@ -12,10 +12,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/utils/language/supported_language.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_fonts.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dart';
@@ -23,6 +24,8 @@ import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:taskwarrior/app/v3/db/task_database.dart';
 
 class SettingsController extends GetxController {
+  static const AppLogger _log = AppLogger('Settings');
+
   RxBool isMovingDirectory = false.obs;
 
   Rx<SupportedLanguage> selectedLanguage = AppSettings.selectedLanguage.obs;
@@ -147,7 +150,7 @@ class SettingsController extends GetxController {
       await toDir.create(recursive: true);
       await testFile.writeAsString("ok");
       await testFile.delete();
-    } on FileSystemException catch (e) {
+    } on FileSystemException catch (e, s) {
       // Map common permission error to a friendly status
       if (e.osError?.errorCode == 1 ||
           (e.osError?.message
@@ -156,15 +159,17 @@ class SettingsController extends GetxController {
               false)) {
         return "not-permitted";
       }
+      _log.warning('Target data directory is not writable', e, s);
       return "error";
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('Target data directory is not writable', e, s);
       return "error";
     }
 
     try {
       await moveDirectoryRecurse(fromDirectory, toDirectory);
       return "success";
-    } on FileSystemException catch (e) {
+    } on FileSystemException catch (e, s) {
       if (e.osError?.errorCode == 1 ||
           (e.osError?.message
                   .toLowerCase()
@@ -172,8 +177,10 @@ class SettingsController extends GetxController {
               false)) {
         return "not-permitted";
       }
+      _log.warning('Could not move the data directory', e, s);
       return "error";
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('Could not move the data directory', e, s);
       return "error";
     }
   }
@@ -216,7 +223,7 @@ class SettingsController extends GetxController {
   Future<void> deleteAllTasksInDB() async {
     var taskDatabase = TaskDatabase();
     await taskDatabase.deleteAllTasksInDB();
-    debugPrint('Deleted all tasks from db');
+    _log.info('Deleted all tasks from the database');
   }
 
   RxBool isSyncOnStartActivel = false.obs;

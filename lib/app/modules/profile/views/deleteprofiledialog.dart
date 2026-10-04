@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/language/sentence_manager.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
+
+const AppLogger _log = AppLogger('Profile');
 
 class DeleteProfileDialog extends StatelessWidget {
   const DeleteProfileDialog({
@@ -41,7 +44,7 @@ class DeleteProfileDialog extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () {
-                  debugPrint("PROFILE$profile${profileName!}");
+                  _log.debug('Cancelled deletion of profile $profile');
                   profiles[profile] = profileName;
                   Get.back();
                 },
@@ -59,6 +62,7 @@ class DeleteProfileDialog extends StatelessWidget {
                   try {
                     var splashController = Get.find<SplashController>();
                     await splashController.deleteProfile(profile);
+                    _log.info('Deleted profile $profile');
                     // Navigator.of(context).pop();
                     if (splashController
                             .getMode(splashController.currentProfile.value) !=
@@ -76,7 +80,8 @@ class DeleteProfileDialog extends StatelessWidget {
                         ),
                         backgroundColor: tColors.secondaryBackgroundColor,
                         duration: const Duration(seconds: 2)));
-                  } catch (e) {
+                  } catch (e, s) {
+                    _log.warning('Could not delete profile $profile', e, s);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(
                           '${SentenceManager(currentLanguage: AppSettings.selectedLanguage).sentences.profilePageProfile}: ${profile.characters} ${SentenceManager(currentLanguage: AppSettings.selectedLanguage).sentences.profileDeletionFailed}',

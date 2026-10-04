@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/permissions/permissions_manager.dart';
 
 class PermissionController extends GetxController {
+  static const AppLogger _log = AppLogger('Permissions');
+
   final RxBool isStorageGranted = false.obs;
   final RxBool isNotificationGranted = false.obs;
   final RxBool isExteternalStorageGranted = false.obs;
@@ -22,8 +24,8 @@ class PermissionController extends GetxController {
           await Permission.notification.status.isGranted;
       isExteternalStorageGranted.value =
           await Permission.manageExternalStorage.status.isGranted;
-    } catch (e) {
-      debugPrint('Error checking permissions: $e');
+    } catch (e, s) {
+      _log.warning('Checking permission status failed', e, s);
     }
   }
 
@@ -37,8 +39,8 @@ class PermissionController extends GetxController {
         await PermissionsManager.requestAllPermissions();
       }
       Get.offNamed('/home');
-    } catch (e) {
-      debugPrint('Error requesting permissions: $e');
+    } catch (e, s) {
+      _log.error('Requesting permissions failed', e, s);
     } finally {
       isLoading.value = false;
     }
@@ -47,8 +49,8 @@ class PermissionController extends GetxController {
   void gotoHome() async {
     try {
       await Get.offNamed('/home');
-    } catch (e) {
-      debugPrint('Error opening home screen: $e');
+    } catch (e, s) {
+      _log.error('Opening the home screen failed', e, s);
     }
   }
 }

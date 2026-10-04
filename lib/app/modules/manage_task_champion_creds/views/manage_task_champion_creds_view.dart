@@ -14,7 +14,6 @@ class ManageTaskChampionCredsView
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("Built ManageTaskChampionCredsView");
     TaskwarriorColorTheme tColors =
         Theme.of(context).extension<TaskwarriorColorTheme>()!;
 

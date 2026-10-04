@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:taskwarrior/app/routes/app_pages.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/gen/fonts.gen.dart';
 import 'package:taskwarrior/app/utils/language/sentence_manager.dart';
 import 'package:taskwarrior/app/utils/taskchampion/credentials_storage.dart';
@@ -12,6 +13,8 @@ import 'package:taskwarrior/app/utils/taskserver/taskserver.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 
 import '../controllers/home_controller.dart';
+
+const AppLogger _log = AppLogger('Home');
 
 class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
   final HomeController controller;
@@ -131,14 +134,13 @@ class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: controller.isRefreshing.value
                     ? null
                     : () async {
-                        debugPrint("Refresh button pressed");
                         if (controller.taskReplica.value) {
                           var c = await CredentialsStorage.getClientId();
                           var e =
                               await CredentialsStorage.getEncryptionSecret();
-                          // Never log the credentials themselves; debugPrint
-                          // is persisted to the in-app Logs page.
-                          debugPrint("Replica refresh "
+                          // Never log the credentials themselves; info logs
+                          // are persisted to the in-app Logs page.
+                          _log.info("Replica refresh requested "
                               "(clientId set: ${c != null}, "
                               "encryptionSecret set: ${e != null})");
                           if (c == null || e == null) {
@@ -152,14 +154,13 @@ class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 true);
                             return;
                           }
-                          debugPrint("Refreshing Replica tasks");
                           controller.isRefreshing.value = true;
                           try {
                             await controller.refreshReplicaTasks();
                             _showResultSnackBar(
                                 context, 'Sync Completed', false);
-                          } catch (e) {
-                            debugPrint('Error refreshing replica tasks: $e');
+                          } catch (e, s) {
+                            _log.warning('Replica refresh failed', e, s);
                             _showResultSnackBar(
                                 context,
                                 SentenceManager(
@@ -196,8 +197,8 @@ class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
 
                               _showResultSnackBar(
                                   context, 'Sync Completed', false);
-                            } catch (e) {
-                              debugPrint('Error refreshing tasks: $e');
+                            } catch (e, s) {
+                              _log.warning('Task refresh failed', e, s);
                               ScaffoldMessenger.of(context)
                                   .hideCurrentSnackBar();
                               _showResultSnackBar(
@@ -230,7 +231,8 @@ class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
                                   .hideCurrentSnackBar();
                               _showResultSnackBar(
                                   context, 'Sync Completed', false);
-                            } catch (e) {
+                            } catch (e, s) {
+                              _log.warning('Taskserver sync failed', e, s);
                               ScaffoldMessenger.of(context)
                                   .hideCurrentSnackBar();
                               _showResultSnackBar(

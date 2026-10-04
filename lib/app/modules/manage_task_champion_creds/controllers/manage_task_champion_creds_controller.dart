@@ -3,11 +3,14 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskchampion/credentials_storage.dart';
 import 'package:taskwarrior/app/v3/champion/replica.dart';
 import 'package:taskwarrior/rust_bridge/api.dart';
 
 class ManageTaskChampionCredsController extends GetxController {
+  static const AppLogger _log = AppLogger('Credentials');
+
   final encryptionSecretController = TextEditingController();
   final clientIdController = TextEditingController();
   final syncServerUrlController = TextEditingController();
@@ -56,6 +59,7 @@ class ManageTaskChampionCredsController extends GetxController {
         encryptionSecretController.text,
         syncServerUrlController.text,
       );
+      _log.info('Verified and saved sync credentials for the current profile.');
       // Populate the task list immediately. The home list is otherwise only
       // filled by an explicit refresh, so right after configuring credentials
       // the user would see an empty list (until a manual refresh or restart)
@@ -68,13 +72,13 @@ class ManageTaskChampionCredsController extends GetxController {
           await homeController.fetchTasksFromDB();
           await homeController.refreshReplicaTasks();
         }
-      } catch (refreshErr) {
-        debugPrint('Post-save replica refresh failed: $refreshErr');
+      } catch (e, s) {
+        _log.warning('Could not refresh tasks after saving credentials', e, s);
       }
       isCheckingCreds.value = false;
       return 0;
-    } catch (err) {
-      debugPrint('Credential check failed: $err');
+    } catch (e, s) {
+      _log.warning('Credential check failed; credentials were not saved', e, s);
       isCheckingCreds.value = false;
       return 1;
     }

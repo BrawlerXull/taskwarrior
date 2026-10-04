@@ -7,7 +7,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:loggy/loggy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taskwarrior/app/models/filters.dart';
 
@@ -23,6 +22,7 @@ import 'package:taskwarrior/app/tour/filter_drawer_tour.dart';
 import 'package:taskwarrior/app/tour/home_page_tour.dart';
 import 'package:taskwarrior/app/tour/task_swipe_tour.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/language/supported_language.dart';
 import 'package:taskwarrior/app/utils/taskchampion/credentials_storage.dart';
 import 'package:taskwarrior/app/utils/taskfunctions/comparator.dart';
@@ -41,6 +41,8 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:taskwarrior/app/tour/safe_tour.dart';
 
 class HomeController extends GetxController {
+  static const AppLogger _log = AppLogger('Home');
+
   final SplashController splashController = Get.find<SplashController>();
   late Storage storage;
   final RxBool pendingFilter = false.obs;
@@ -81,7 +83,6 @@ class HomeController extends GetxController {
 
   @override
   void onInit() {
-    debugPrint("🚀 BOOT: HomeController.onInit()");
     super.onInit();
     storage = Storage(
       Directory(
@@ -154,8 +155,7 @@ class HomeController extends GetxController {
 
       final deepLinkService = Get.find<DeepLinkService>();
       if (deepLinkService.queuedUri != null) {
-        debugPrint(
-            "🚀 TRACE: HomeController.onReady() consuming deferred queue!");
+        _log.debug('Consuming deep link queued before Home was ready');
         deepLinkService.consumePendingActions(this);
       }
     });
@@ -171,28 +171,24 @@ class HomeController extends GetxController {
     }
     var taskDatabase = TaskDatabase();
     List<String> uniqueProjects = await taskDatabase.fetchUniqueProjects();
-    debugPrint('Unique projects: $uniqueProjects');
     return uniqueProjects;
   }
 
   Future<void> deleteAllTasksInDB() async {
     var taskDatabase = TaskDatabase();
     await taskDatabase.deleteAllTasksInDB();
-    debugPrint('Deleted all tasks from db');
+    _log.info('Deleted all tasks from the local database');
   }
 
   Future<void> refreshReplicaTaskList() async {
     if (!taskReplica.value) return;
     tasksFromReplica.value = await Replica.getAllTasksFromReplica();
-    debugPrint("Tasks from Replica: ${tasksFromReplica.length}");
   }
 
   Future<void> fetchTasksFromDB() async {
-    debugPrint("Fetching tasks from DB ${taskReplica.value}");
     await _loadTaskChampion();
     if (taskReplica.value) {
       tasksFromReplica.value = await Replica.getAllTasksFromReplica();
-      debugPrint("Tasks from Replica: ${tasksFromReplica.length}");
       return;
     }
     if (taskchampion.value == false) {
@@ -214,7 +210,6 @@ class HomeController extends GetxController {
     if (!taskReplica.value) return;
     await Replica.sync();
     tasksFromReplica.value = await Replica.getAllTasksFromReplica();
-    debugPrint("Tasks from Replica: ${tasksFromReplica.length}");
   }
 
   void addListenerToScrollController() {
@@ -503,7 +498,7 @@ class HomeController extends GetxController {
       if (isDialogNeeded) {
         Get.back(closeOverlays: true);
       }
-      logError(e, trace);
+      _log.error('Taskserver synchronization failed', e, trace);
     }
   }
 
@@ -628,8 +623,8 @@ class HomeController extends GetxController {
           ),
         );
       }
-    } catch (e) {
-      debugPrint('Error during sync on start: $e');
+    } catch (e, s) {
+      _log.warning('Sync on start failed', e, s);
     } finally {
       isRefreshing.value = false;
     }
@@ -712,7 +707,7 @@ class HomeController extends GetxController {
   }
 
   void changeInDirectory() {
-    print("directory change to ${splashController.baseDirectory.value.path}");
+    _log.info('Base directory changed');
     storage = Storage(
       Directory(
         '${splashController.baseDirectory.value.path}/profiles/${splashController.currentProfile.value}',
@@ -741,11 +736,10 @@ class HomeController extends GetxController {
     HomeWidget.updateWidget(
             qualifiedAndroidName: kAndroidWidgetProvider,
             iOSName: "TaskWarriorWidgets")
-        .catchError((Object e) {
-      debugPrint('Error updating widget theme: $e');
+        .catchError((Object e, StackTrace s) {
+      _log.warning('Could not update the home widget theme', e, s);
       return null;
     });
-    // print("called and value is${isDarkModeOn.value}");
   }
 
   final addKey = GlobalKey();
@@ -780,7 +774,6 @@ class HomeController extends GetxController {
       const Duration(milliseconds: 500),
       () async {
         if (await SaveTourStatus.getInAppTourStatus()) {
-          debugPrint('User has seen this page');
           return;
         }
         await safeShowTour(
@@ -830,7 +823,6 @@ class HomeController extends GetxController {
       const Duration(milliseconds: 500),
       () async {
         if (await SaveTourStatus.getFilterTourStatus()) {
-          debugPrint('User has seen this page');
           return;
         }
         await safeShowTour(
@@ -869,7 +861,6 @@ class HomeController extends GetxController {
   void showTaskSwipeTutorial(BuildContext context) {
     SaveTourStatus.getTaskSwipeTutorialStatus().then((value) async {
       if (value) {
-        debugPrint('User has already seen the task swipe tutorial');
         return;
       }
       initTaskSwipeTutorial();
@@ -898,53 +889,6 @@ class HomeController extends GetxController {
     return tagSet(storage.data.allData());
   }
 
-  RxString uuid = "".obs;
-  RxBool isHomeWidgetTaskTapped = false.obs;
-
-  // void handleHomeWidgetClicked() async {
-  //   Uri? uri = await HomeWidget.initiallyLaunchedFromHomeWidget();
-  //   if (uri != null) {
-  //     if (uri.host == "cardclicked") {
-  //       if (uri.queryParameters["uuid"] != null &&
-  //           !taskchampion.value &&
-  //           !taskReplica.value) {
-  //         uuid.value = uri.queryParameters["uuid"] as String;
-  //         isHomeWidgetTaskTapped.value = true;
-  //         Future.delayed(Duration.zero, () {
-  //           Get.toNamed(Routes.DETAIL_ROUTE, arguments: ["uuid", uuid.value]);
-  //         });
-  //       }
-  //     } else if (uri.host == "addclicked") {
-  //       showAddDialogAfterWidgetClick();
-  //     }
-  //   }
-  //   HomeWidget.widgetClicked.listen((uri) async {
-  //     if (uri != null) {
-  //       if (uri.host == "cardclicked") {
-  //         if (uri.queryParameters["uuid"] != null &&
-  //             !taskchampion.value &&
-  //             !taskReplica.value) {
-  //           uuid.value = uri.queryParameters["uuid"] as String;
-  //           isHomeWidgetTaskTapped.value = true;
-
-  //           debugPrint('uuid is $uuid');
-  //           Get.toNamed(Routes.DETAIL_ROUTE, arguments: ["uuid", uuid.value]);
-  //         }
-  //       } else if (uri.host == "addclicked") {
-  //         showAddDialogAfterWidgetClick();
-  //       }
-  //     }
-  //   });
-  // }
-
-  // void showAddDialogAfterWidgetClick() {
-  //   Widget showDialog = Material(
-  //       child: AddTaskBottomSheet(
-  //           homeController: this,
-  //           forTaskC: taskchampion.value,
-  //           forReplica: taskReplica.value));
-  //   Get.dialog(showDialog);
-  // }
   @override
   void onClose() {
     searchFocusNode.dispose();
