@@ -57,8 +57,10 @@ class WidgetController extends GetxController {
   List<Map<String, dynamic>> getTW2Tasks(HomeController taskController) {
     int lengthBeforeFilters = allData.length;
     List<Task> tasks = allData;
+    final hasProjectFilter = taskController.projectFilter.value.isNotEmpty &&
+        taskController.projectFilter.value != 'All Projects';
     _log.debug('Filtering ${tasks.length} tasks for widget (project filter: '
-        '${taskController.projectFilter.value != 'All Projects'}, '
+        '$hasProjectFilter, '
         'pending only: ${taskController.pendingFilter.value}, '
         'sort: ${taskController.selectedSort.value})');
     if (taskController.projectFilter.value != 'All Projects' &&

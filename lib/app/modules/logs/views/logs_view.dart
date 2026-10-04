@@ -15,7 +15,9 @@ class LogsView extends GetView<LogsController> {
 
   Future<void> _copyLogs(BuildContext context) async {
     final text = controller.exportVisible();
-    final messenger = ScaffoldMessenger.of(context);
+    // Replace whatever snackbar is showing (e.g. a sticky sync notice from
+    // the home page) so the copy result is visible immediately.
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     if (text.isEmpty) {
       messenger.showSnackBar(
           const SnackBar(content: Text('No logs match the current filters.')));

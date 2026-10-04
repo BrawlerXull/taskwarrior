@@ -231,7 +231,8 @@ class HomePageAppBar extends StatelessWidget implements PreferredSizeWidget {
                                   .hideCurrentSnackBar();
                               _showResultSnackBar(
                                   context, 'Sync Completed', false);
-                            } catch (e) {
+                            } catch (e, s) {
+                              _log.warning('Taskserver sync failed', e, s);
                               ScaffoldMessenger.of(context)
                                   .hideCurrentSnackBar();
                               _showResultSnackBar(
