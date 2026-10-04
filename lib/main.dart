@@ -6,13 +6,14 @@ import 'package:get/get.dart';
 import 'package:taskwarrior/app/services/deep_link_service.dart';
 
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
-import 'package:taskwarrior/app/utils/debug_logger/log_databse_helper.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
+import 'package:taskwarrior/app/utils/debug_logger/log_database_helper.dart';
 import 'package:taskwarrior/app/utils/themes/dark_theme.dart';
 import 'package:taskwarrior/app/utils/themes/light_theme.dart';
 import 'package:taskwarrior/rust_bridge/frb_generated.dart';
 import 'app/routes/app_pages.dart';
 
-LogDatabaseHelper _logDatabaseHelper = LogDatabaseHelper();
+const AppLogger _log = AppLogger('App');
 
 DynamicLibrary loadNativeLibrary() {
   if (Platform.isIOS) {
@@ -29,15 +30,18 @@ DynamicLibrary loadNativeLibrary() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Move the logger override ABOVE the first boot print!
-  debugPrint = (String? message, {int? wrapWidth}) {
-    if (message != null) {
-      debugPrintSynchronously(message, wrapWidth: wrapWidth);
-      _logDatabaseHelper.insertLog(message);
-    }
+  // Attach the log store before anything logs, so boot problems are kept.
+  AppLogger.attachSink(LogDatabaseHelper.instance);
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    _log.error('Uncaught Flutter error', details.exception, details.stack);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    _log.error('Uncaught async error', error, stack);
+    return true;
   };
 
-  debugPrint("🚀 BOOT: main() started");
+  _log.info('App starting');
 
   loadNativeLibrary();
   await RustLib.init();
@@ -59,7 +63,7 @@ void main() async {
       unknownRoute: AppPages.routes.firstWhere(
         (page) => page.name == AppPages.INITIAL,
         orElse: () {
-          debugPrint("⚠️ Unknown route requested, falling back to default");
+          _log.warning('Unknown route requested, falling back to default');
           return AppPages.routes.first;
         },
       ),
