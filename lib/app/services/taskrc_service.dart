@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:taskwarrior/app/models/report.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskchampion/taskrc_parser.dart';
 
 /// Reads and writes the user `.taskrc` that holds custom reports (Issue #418).
@@ -12,6 +13,8 @@ import 'package:taskwarrior/app/utils/taskchampion/taskrc_parser.dart';
 /// in the app are indistinguishable) and means the file can be copied to a
 /// desktop Taskwarrior and still work.
 class TaskrcService {
+  static const AppLogger _log = AppLogger('Reports');
+
   static Future<File> _file() async {
     final Directory dir = await getApplicationDocumentsDirectory();
     return File('${dir.path}/.taskrc');
@@ -27,7 +30,8 @@ class TaskrcService {
       if (!await file.exists()) return <ReportDefinition>[];
       final TaskrcParser parser = TaskrcParser()..parse(await file.readAsString());
       return parser.customReports();
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('Could not read custom reports from .taskrc', e, s);
       return <ReportDefinition>[];
     }
   }

@@ -6,11 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
-import 'package:loggy/loggy.dart';
 import 'package:taskwarrior/app/models/storage/client.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_fonts.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 
 import 'package:taskwarrior/app/utils/gen/fonts.gen.dart';
 
@@ -21,6 +21,8 @@ import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/manage_task_server_controller.dart';
+
+const AppLogger _log = AppLogger('TaskServer');
 
 class ManageTaskServerPageAppBar extends StatelessWidget
     implements PreferredSizeWidget {
@@ -214,8 +216,7 @@ class ManageTaskServerPageAppBar extends StatelessWidget
                   ),
                   backgroundColor: tColors.secondaryBackgroundColor,
                   duration: const Duration(seconds: 2)));
-              // Log the error and trace
-              logError(e, trace);
+              _log.warning('Could not fetch taskserver statistics', e, trace);
               // Refresh the state of ProfilesWidget
             }
           },

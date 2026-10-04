@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/v3/champion/replica.dart';
 import 'package:uuid/v4.dart';
 
@@ -22,11 +22,13 @@ import 'package:uuid/v4.dart';
 /// Idempotent: tasks whose description starts with [marker] are removed first.
 const String marker = '[seed] ';
 
+const AppLogger _log = AppLogger('DummySeeder');
+
 Future<int> seedDummyTasks({int days = 365}) async {
   final List<_Dummy> tasks = _generate(days);
   await _seedReplica(tasks);
   await _seedLegacy(tasks);
-  debugPrint('Seeded ${tasks.length} tasks over $days days');
+  _log.info('Seeded ${tasks.length} dummy tasks over $days days.');
   return tasks.length;
 }
 

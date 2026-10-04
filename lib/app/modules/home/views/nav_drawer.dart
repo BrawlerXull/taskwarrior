@@ -13,7 +13,7 @@ import 'package:taskwarrior/app/modules/reports/views/reports_view_taskc.dart';
 import 'package:taskwarrior/app/routes/app_pages.dart';
 import 'package:taskwarrior/app/utils/constants/constants.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_fonts.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 import 'package:taskwarrior/app/utils/language/sentence_manager.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:taskwarrior/app/utils/themes/dark_theme.dart';

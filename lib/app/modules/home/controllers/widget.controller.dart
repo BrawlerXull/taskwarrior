@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:home_widget/home_widget.dart';
@@ -13,6 +12,7 @@ import 'package:taskwarrior/app/models/json/task.dart';
 import 'package:taskwarrior/app/models/storage.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/taskfunctions/urgency.dart';
 // import 'package:taskwarrior/widgets/taskfunctions/datetime_differences.dart';
 
@@ -26,6 +26,8 @@ const String kAndroidWidgetProvider =
     'com.ccextractor.taskwarriorflutter.TaskWarriorWidgetProvider';
 
 class WidgetController extends GetxController {
+  static const AppLogger _log = AppLogger('HomeWidget');
+
   final HomeController storageWidget = Get.find<HomeController>();
   late Storage storage;
   late final Filters filters; // Use RxList for observable list
@@ -55,8 +57,10 @@ class WidgetController extends GetxController {
   List<Map<String, dynamic>> getTW2Tasks(HomeController taskController) {
     int lengthBeforeFilters = allData.length;
     List<Task> tasks = allData;
-    debugPrint(
-        'Tasks: ${tasks.length}, ${taskController.projectFilter}, ${taskController.pendingFilter.value}, ${taskController.selectedSort.value}');
+    _log.debug('Filtering ${tasks.length} tasks for widget (project filter: '
+        '${taskController.projectFilter.value != 'All Projects'}, '
+        'pending only: ${taskController.pendingFilter.value}, '
+        'sort: ${taskController.selectedSort.value})');
     if (taskController.projectFilter.value != 'All Projects' &&
         taskController.projectFilter.toString().isNotEmpty) {
       tasks = tasks
@@ -195,8 +199,8 @@ class WidgetController extends GetxController {
       return await HomeWidget.updateWidget(
           qualifiedAndroidName: kAndroidWidgetProvider,
           iOSName: 'TaskWarriorWidgets');
-    } on PlatformException catch (exception) {
-      debugPrint('Error Updating Widget. $exception');
+    } on PlatformException catch (e, s) {
+      _log.warning('Could not update home screen widget', e, s);
     }
   }
 }

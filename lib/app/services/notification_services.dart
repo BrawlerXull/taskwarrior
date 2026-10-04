@@ -3,14 +3,16 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 
 class NotificationService {
+  static const AppLogger _log = AppLogger('Notifications');
+
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   final AndroidInitializationSettings _androidInitializationSettings =
@@ -65,12 +67,8 @@ class NotificationService {
 
   void sendNotification(
       DateTime dtb, String taskname, bool isWait, DateTime entryTime) async {
-    DateTime dateTime = DateTime.now();
     tz.initializeTimeZones();
-    if (kDebugMode) {
-      print("date and time are:-$dateTime");
-      print("date and time are:-${getFormattedDateTime(dtb)}");
-    }
+    _log.debug('Scheduling a notification for ${getFormattedDateTime(dtb)}.');
     final tz.TZDateTime scheduledAt =
         tz.TZDateTime.from(dtb.add(const Duration(minutes: 0)), tz.local);
 
@@ -118,18 +116,11 @@ class NotificationService {
                 UILocalNotificationDateInterpretation.absoluteTime,
             androidScheduleMode: AndroidScheduleMode.alarmClock)
         .then((value) {
-      if (kDebugMode) {
-        print('Notification scheduled successfully');
-      }
-    }).catchError((error) {
-      if (kDebugMode) {
-        print('Error scheduling notification: $error');
-      }
+      _log.info('Scheduled notification $notificationId.');
+    }).catchError((Object error, StackTrace stackTrace) {
+      _log.error(
+          'Failed to schedule notification $notificationId', error, stackTrace);
     });
-
-    if (kDebugMode) {
-      print(scheduledAt.day * 100 + scheduledAt.hour * 10 + scheduledAt.minute);
-    }
   }
 
   // Delete previously scheduled notification with a specific ID

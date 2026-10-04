@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:taskwarrior/app/modules/detailRoute/controllers/detail_route_controller.dart';
 import 'package:taskwarrior/app/modules/detailRoute/views/detail_route_dialog_action.dart';
 import 'package:taskwarrior/app/utils/constants/constants.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
 import 'package:taskwarrior/app/utils/gen/fonts.gen.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 

@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, file_names, prefer_typing_uninitialized_variables, avoid_print
+// ignore_for_file: deprecated_member_use, file_names, prefer_typing_uninitialized_variables
 
 import 'dart:async';
 import 'dart:convert';
@@ -7,11 +7,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 
 //import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 
 //var serverUrl = dotenv.env['SERVER_URL'];
+
+const AppLogger _log = AppLogger('Notifications');
 
 Future<PushNotificationResponse> createPushNotification(
     String id, String token) async {
@@ -31,7 +34,8 @@ Future<PushNotificationResponse> createPushNotification(
   );
 
   if (response.statusCode == 200) {
-    print(response.body);
+    _log.info('Push notification registration succeeded with status '
+        '${response.statusCode}.');
     return PushNotificationResponse.fromJson(jsonDecode(response.body));
   } else if (response.statusCode == 422) {
     throw ('Unable to push notification');

@@ -99,6 +99,8 @@ class _ReportBuilderSheetState extends State<ReportBuilderSheet> {
       final int n = await widget.controller.previewMatchCount(_filter.text);
       if (mounted) setState(() => _matchCount = n);
     } catch (_) {
+      // The count is advisory and re-run on every pause while typing; a failure
+      // just hides it rather than spamming the log.
       if (mounted) setState(() => _matchCount = null);
     } finally {
       if (mounted) setState(() => _counting = false);

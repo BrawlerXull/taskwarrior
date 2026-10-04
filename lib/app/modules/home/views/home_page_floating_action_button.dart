@@ -49,8 +49,6 @@ class HomePageFloatingActionButton extends StatelessWidget {
             }))
 
         // .then((value) {
-        //   // print(value);
-
         //   //if auto sync is turned on
         //   if (isSyncNeeded) {
         //     //if user have not created any event then

@@ -7,6 +7,7 @@ import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dar
 import 'package:taskwarrior/app/tour/reports_page_tour.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/v3/db/task_database.dart';
 import 'package:taskwarrior/app/v3/models/task.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
@@ -14,6 +15,8 @@ import 'package:taskwarrior/app/tour/safe_tour.dart';
 
 class ReportsController extends GetxController
     with GetTickerProviderStateMixin {
+  static const AppLogger _log = AppLogger('Reports');
+
   late TabController tabController;
   final GlobalKey daily = GlobalKey();
   final GlobalKey weekly = GlobalKey();
@@ -54,8 +57,6 @@ class ReportsController extends GetxController
   //               }
   //             else
   //               {
-  //                 // ignore: avoid_print
-  //                 print('User has seen this page'),
   //               }
   //           });
   //     },
@@ -84,7 +85,7 @@ class ReportsController extends GetxController
       const Duration(milliseconds: 500),
       () async {
         if (await SaveTourStatus.getReportsTourStatus()) {
-          debugPrint('User has seen this page');
+          _log.debug('Reports tour already seen, skipping it');
           return;
         }
         await safeShowTour(

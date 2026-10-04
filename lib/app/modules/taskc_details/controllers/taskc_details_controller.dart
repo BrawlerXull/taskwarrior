@@ -5,7 +5,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
-import 'package:taskwarrior/app/utils/constants/utilites.dart';
+import 'package:taskwarrior/app/utils/constants/utilities.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:taskwarrior/app/utils/language/sentence_manager.dart';
 import 'package:taskwarrior/app/v3/db/task_database.dart';
@@ -17,6 +18,8 @@ import 'package:taskwarrior/app/v3/champion/models/task_for_replica.dart';
 enum UnsavedChangesAction { save, discard, cancel }
 
 class TaskcDetailsController extends GetxController {
+  static const AppLogger _log = AppLogger('TaskDetails');
+
   late final dynamic initialTask;
   late TaskDatabase taskDatabase;
 
@@ -83,13 +86,10 @@ class TaskcDetailsController extends GetxController {
       // the replica on the next save.
       priority = _displayPriority(task.priority).obs;
       // TaskForReplica stores epoch seconds; convert to ISO string for formatting
-      debugPrint('Replica task due: ${task.due}');
       due = formatDate(task.due).obs;
       // Initialize start/wait from replica model (may be ISO or epoch)
       start = formatDate(task.start).obs;
       wait = formatDate(task.wait).obs;
-      debugPrint(
-          'Replica task tags while init: ${task.tags ?? task.tags?.join(", ")}');
       tags = task.tags != null
           ? task.tags!.map((e) => e.toString()).toList().obs
           : <String>[].obs;
@@ -136,7 +136,7 @@ class TaskcDetailsController extends GetxController {
         final dt = DateTime.fromMillisecondsSinceEpoch(date * 1000);
         return DateFormat(pattern).format(dt.toLocal());
       } catch (e) {
-        debugPrint('Error formatting epoch date: $e');
+        _log.debug('Could not format epoch date: $e');
         return 'None';
       }
     }
@@ -145,7 +145,7 @@ class TaskcDetailsController extends GetxController {
       try {
         return DateFormat(pattern).format(date.toLocal());
       } catch (e) {
-        debugPrint('Error formatting DateTime: $e');
+        _log.debug('Could not format DateTime: $e');
         return 'None';
       }
     }
@@ -157,7 +157,7 @@ class TaskcDetailsController extends GetxController {
       final parsedDate = DateTime.parse(dateString).toLocal();
       return DateFormat(pattern).format(parsedDate);
     } catch (e) {
-      debugPrint('Error parsing date: $dateString $e');
+      _log.debug('Could not parse date string: $e');
       return 'None';
     }
   }
@@ -333,8 +333,8 @@ class TaskcDetailsController extends GetxController {
           .tasksFromReplica
           .where((t) => t.uuid != self && !already.contains(t.uuid))
           .toList();
-    } catch (e) {
-      debugPrint('Could not list dependency candidates: $e');
+    } catch (e, s) {
+      _log.warning('Could not list dependency candidates', e, s);
       return <TaskForReplica>[];
     }
   }
@@ -354,7 +354,7 @@ class TaskcDetailsController extends GetxController {
         }
       }
     } catch (_) {
-      // fall through to the UUID form
+      // HomeController may not be registered here; fall through to the UUID form.
     }
     return uuid.length > 8 ? '${uuid.substring(0, 8)}…' : uuid;
   }
@@ -422,8 +422,8 @@ class TaskcDetailsController extends GetxController {
   Future<void> _refreshHomeTasks() async {
     try {
       await Get.find<HomeController>().refreshReplicaTasks();
-    } catch (e) {
-      debugPrint('Could not refresh tasks after write: $e');
+    } catch (e, s) {
+      _log.warning('Could not refresh tasks after write', e, s);
     }
   }
 
@@ -449,6 +449,7 @@ class TaskcDetailsController extends GetxController {
       if (initialTask is TaskForReplica) return initialTask.uuid ?? 'None';
       return 'None';
     } catch (_) {
+      // initialTask is late/dynamic; an unset or odd-shaped task just shows None.
       return 'None';
     }
   }
@@ -462,6 +463,7 @@ class TaskcDetailsController extends GetxController {
       // TaskForReplica doesn't have urgency
       return 'None';
     } catch (_) {
+      // Urgency may be missing or not a double; show None rather than fail.
       return 'None';
     }
   }
@@ -473,6 +475,7 @@ class TaskcDetailsController extends GetxController {
       if (initialTask is TaskForC) return initialTask.entry;
       return null;
     } catch (_) {
+      // initialTask is late/dynamic; a missing value simply renders as None.
       return null;
     }
   }
@@ -482,6 +485,7 @@ class TaskcDetailsController extends GetxController {
       if (initialTask is TaskForC) return initialTask.end;
       return null;
     } catch (_) {
+      // initialTask is late/dynamic; a missing value simply renders as None.
       return null;
     }
   }
@@ -492,6 +496,7 @@ class TaskcDetailsController extends GetxController {
       if (initialTask is TaskForReplica) return initialTask.modified;
       return null;
     } catch (_) {
+      // initialTask is late/dynamic; a missing value simply renders as None.
       return null;
     }
   }
@@ -533,11 +538,11 @@ class TaskcDetailsController extends GetxController {
         tags.toList(),
       );
       hasChanges.value = false;
-      debugPrint('Task saved in local DB ${description.string}');
+      _log.info('Saved task ${initialTask.uuid} to the local database.');
       processTagsLists();
     } else if (initialTask is TaskForReplica) {
-      debugPrint(
-          'Saving replica task changes... status ${status.string} ${tags.join(", ")}');
+      _log.debug(
+          'Saving changes to replica task ${initialTask.uuid} (status: ${status.string}).');
       final int nowEpoch = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final modifiedTask = TaskForReplica(
         modified: nowEpoch,
@@ -551,12 +556,15 @@ class TaskcDetailsController extends GetxController {
             final parsed = DateFormat(datePattern).parse(due.string);
             return parsed.toUtc().toIso8601String();
           } catch (e) {
+            // Not in the display format; fall back to ISO 8601 below.
             try {
               final parsed2 = DateTime.parse(due.string);
               return parsed2.toUtc().toIso8601String();
-            } catch (_) {
-              debugPrint(
-                  'Could not parse due string for replica: ${due.string}');
+            } catch (e, s) {
+              _log.warning(
+                  'Could not parse due date for replica task ${initialTask.uuid}; leaving it unchanged',
+                  e,
+                  s);
               return null;
             }
           }
@@ -568,12 +576,15 @@ class TaskcDetailsController extends GetxController {
             final parsed = DateFormat(datePattern).parse(start.string);
             return parsed.toUtc().toIso8601String();
           } catch (e) {
+            // Not in the display format; fall back to ISO 8601 below.
             try {
               final parsed2 = DateTime.parse(start.string);
               return parsed2.toUtc().toIso8601String();
-            } catch (_) {
-              debugPrint(
-                  'Could not parse start string for replica: ${start.string}');
+            } catch (e, s) {
+              _log.warning(
+                  'Could not parse start date for replica task ${initialTask.uuid}; leaving it unchanged',
+                  e,
+                  s);
               return null;
             }
           }
@@ -585,12 +596,15 @@ class TaskcDetailsController extends GetxController {
             final parsed = DateFormat(datePattern).parse(wait.string);
             return parsed.toUtc().toIso8601String();
           } catch (e) {
+            // Not in the display format; fall back to ISO 8601 below.
             try {
               final parsed2 = DateTime.parse(wait.string);
               return parsed2.toUtc().toIso8601String();
-            } catch (_) {
-              debugPrint(
-                  'Could not parse wait string for replica: ${wait.string}');
+            } catch (e, s) {
+              _log.warning(
+                  'Could not parse wait date for replica task ${initialTask.uuid}; leaving it unchanged',
+                  e,
+                  s);
               return null;
             }
           }
@@ -633,7 +647,6 @@ class TaskcDetailsController extends GetxController {
         // back. An empty string reaches update_task, which clears the property.
         recur: recur.string.trim(),
       );
-      debugPrint('Modified replica task: $modifiedTask');
       hasChanges.value = false;
       processTagsLists();
       final String? error = await Replica.modifyTaskInReplica(modifiedTask);
@@ -641,15 +654,18 @@ class TaskcDetailsController extends GetxController {
         // The edit was rejected outright (e.g. recurrence without a due date),
         // so the draft is still unsaved — say why rather than silently losing it.
         hasChanges.value = true;
+        _log.warning(
+            'Replica rejected edit of task ${initialTask.uuid}; draft kept', error);
         Get.snackbar('Not saved', error,
             snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4));
         return;
       }
+      _log.info('Saved replica task ${initialTask.uuid}.');
       try {
         final HomeController homeController = Get.find<HomeController>();
         await homeController.refreshReplicaTasks();
-      } catch (e) {
-        debugPrint('Could not find HomeController to refresh tasks: $e');
+      } catch (e, s) {
+        _log.warning('Could not refresh tasks after saving', e, s);
       }
     }
   }

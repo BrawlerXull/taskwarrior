@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:loggy/loggy.dart';
 import 'package:taskwarrior/app/models/storage.dart';
 import 'package:taskwarrior/app/models/storage/set_config.dart';
 import 'package:taskwarrior/app/modules/home/controllers/home_controller.dart';
@@ -11,6 +10,7 @@ import 'package:taskwarrior/app/modules/splash/controllers/splash_controller.dar
 import 'package:taskwarrior/app/tour/manage_task_server_page_tour.dart';
 import 'package:taskwarrior/app/tour/safe_tour.dart';
 import 'package:taskwarrior/app/utils/constants/taskwarrior_colors.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/home_path/home_path.dart' as rc;
 import 'package:taskwarrior/app/utils/taskserver/taskserver.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
@@ -18,6 +18,8 @@ import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 class ManageTaskServerController extends GetxController {
+  static const AppLogger _log = AppLogger('TaskServer');
+
   final HomeController homeController = Get.find<HomeController>();
   final SplashController splashController = Get.find<SplashController>();
   RxString profile = ''.obs;
@@ -70,8 +72,8 @@ class ManageTaskServerController extends GetxController {
         );
       }
       update();
-    } catch (e) {
-      logError(e);
+    } catch (e, s) {
+      _log.error('Could not load the debug taskrc fixture', e, s);
     }
   }
 
@@ -162,7 +164,6 @@ class ManageTaskServerController extends GetxController {
           '${credentials!.org}/${credentials!.user}/$key';
 
       if (credentialsString!.value.isNotEmpty && server.toString().isNotEmpty) {
-        //print(credentialsString.value);
         taskrcContentController.text =
             "taskd.server=$server\ntaskd.credentials=${credentials!.org}/${credentials!.user}/$key";
 

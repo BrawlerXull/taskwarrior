@@ -12,12 +12,15 @@ import 'package:taskwarrior/app/utils/add_task_dialogue/date_picker_input.dart';
 import 'package:taskwarrior/app/utils/add_task_dialogue/tags_input.dart';
 import 'package:taskwarrior/app/utils/app_settings/app_settings.dart';
 import 'package:taskwarrior/app/utils/constants/constants.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:taskwarrior/app/utils/language/sentence_manager.dart';
 import 'package:taskwarrior/app/utils/taskfunctions/add_task_dialog_utils.dart';
 import 'package:taskwarrior/app/utils/taskfunctions/taskparser.dart';
 import 'package:taskwarrior/app/utils/themes/theme_extension.dart';
 import 'package:taskwarrior/app/v3/champion/replica.dart';
 import 'package:taskwarrior/app/v3/models/task.dart';
+
+const AppLogger _log = AppLogger('AddTask');
 
 class AddTaskBottomSheet extends StatelessWidget {
   final HomeController homeController;
@@ -31,8 +34,6 @@ class AddTaskBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint(
-        "Building Add Task Bottom Sheet for ${forTaskC ? "TaskC" : forReplica ? "Replica" : "Normal Task"}");
     const padding = 12.0;
     return Padding(
       padding: EdgeInsets.only(
@@ -74,7 +75,7 @@ class AddTaskBottomSheet extends StatelessWidget {
                       if (forTaskC) {
                         onSaveButtonClickedTaskC(context);
                       } else if (forReplica) {
-                        debugPrint("Saving to Replica");
+                        _log.debug('Save pressed for a replica task');
                         onSaveButtonClickedForReplica(context);
                       } else {
                         onSaveButtonClicked(context);
@@ -255,9 +256,7 @@ class AddTaskBottomSheet extends StatelessWidget {
                 suffixIcon: Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: GestureDetector(
-                    onTap: () {
-                      debugPrint("Open priority selection.");
-                    },
+                    onTap: () {},
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -268,7 +267,8 @@ class AddTaskBottomSheet extends StatelessWidget {
                             onTap: () {
                               homeController.priority.value =
                                   homeController.priorityList[i];
-                              debugPrint(homeController.priority.value);
+                              _log.debug('Priority set to '
+                                  '${homeController.priority.value}');
                             },
                             child: AnimatedContainer(
                               margin: const EdgeInsets.only(right: 5),
@@ -329,7 +329,6 @@ class AddTaskBottomSheet extends StatelessWidget {
   void onSaveButtonClickedTaskC(BuildContext context) async {
     _adoptPendingTag();
     if (homeController.formKey.currentState!.validate()) {
-      debugPrint("tags ${homeController.tags}");
       var task = TaskForC(
           description: homeController.namecontroller.text.trim(),
           status: 'pending',

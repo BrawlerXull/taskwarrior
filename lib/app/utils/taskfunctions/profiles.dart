@@ -3,13 +3,15 @@
 import 'dart:collection';
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:taskwarrior/app/models/storage.dart';
+import 'package:taskwarrior/app/utils/debug_logger/app_logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as Path;
 
 class Profiles {
+  static const AppLogger _log = AppLogger('Profiles');
+
   Profiles(this.base);
 
   final Directory base;
@@ -72,7 +74,7 @@ class Profiles {
             entity.uri.pathSegments.lastWhere((segment) => segment.isNotEmpty))
         .toList()
       ..sort(comparator);
-    debugPrint('Profiles found: $dirs');
+    _log.debug('Found ${dirs.length} profiles.');
     return dirs;
   }
 
